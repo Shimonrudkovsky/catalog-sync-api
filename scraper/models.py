@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional
 from urllib.parse import ParseResult as ParsedUrl
 
+from db.database import Postgres
 from httpx import AsyncClient as HttpAsyncClient
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,6 +36,7 @@ class ScraperContext(BaseModel):
     visited_urls: set
     queue: AsyncQueue
     http_client: HttpAsyncClient
+    db_connection: Postgres
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,

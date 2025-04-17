@@ -3,7 +3,11 @@ import urllib
 import urllib.parse
 
 import httpx
+from asyncpg import PostgresError
 from bs4 import BeautifulSoup
+from db.database import Postgres
+from db.queries import INSERT_DATA_QUERY
+from db.utils import initialize_database
 from httpx import HTTPError
 from loguru import logger
 from models import (
@@ -37,7 +41,7 @@ def extract_links(soup: BeautifulSoup, payload: ScraperPayload) -> list[Catalogu
     catalogue_divs = [i for i in soup.find_all("div") if i.get("class") and i.get("class")[-1] == payload.level]
     list_items = catalogue_divs[0].find_all("li")
     parsed_links = []
-    for li in list_items[:1]:  # TODO: don't forget to remove
+    for li in list_items[:2]:  # TODO: don't forget to remove
         a_tag = li.find("a")
         if a_tag:
             link = a_tag.get("href")
@@ -98,7 +102,22 @@ async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
         await enqueue_links(links=links, next_level=CatalogueLevels.PARTS, ctx=ctx)
     elif level == CatalogueLevels.PARTS:
         parts = parse_parts(links=links)
-        print(parts)
+        for part in parts:
+            try:
+                logger.debug(f"query: {INSERT_DATA_QUERY}, args: {part}")
+                await ctx.db_connection.execute(
+                    INSERT_DATA_QUERY,
+                    part.maker,
+                    part.category,
+                    part.model,
+                    part.part.number,
+                    part.part.category,
+                    part.part.url,
+                )
+                logger.debug(f"insert query complete args: {part}")
+            except PostgresError as err:
+                raise err  # TODO: raise another
+        # print(parts)
 
     ctx.visited_urls.add(url)
 
@@ -126,8 +145,20 @@ async def main():
 
     await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
 
+    database = Postgres(
+        host="localhost", port=5432, database="parts_catalogue", user="user", password="pass"
+    )  # TODO: remove hardcode
+    await database.connect()
+    await initialize_database(db=database)
+
     async with httpx.AsyncClient() as http_client:
-        context = ScraperContext(semaphore=semaphore, visited_urls=visited_urls, queue=queue, http_client=http_client)
+        context = ScraperContext(
+            semaphore=semaphore,
+            visited_urls=visited_urls,
+            queue=queue,
+            http_client=http_client,
+            db_connection=database,
+        )
         tasks = [asyncio.create_task(scraper_worker(ctx=context)) for _ in range(CONCURRENT_REQUESTS)]
         await queue.join()
         for task in tasks:
