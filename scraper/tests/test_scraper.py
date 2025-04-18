@@ -2,9 +2,10 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
-from app.scraper import enqueue_links, extract_links, fetch_html, insert_parts, parse_parts, process_page
 from bs4 import BeautifulSoup
-from models.models import CatalogueLevels, CatalogueLink, CataloguePart, PartDetails, ScraperPayload
+
+from app.scraper import enqueue_links, extract_links, fetch_html, insert_parts, parse_parts, process_page
+from models import CatalogueLevels, CatalogueLink, CataloguePart, PartDetails, ScraperPayload
 
 
 @pytest.mark.asyncio

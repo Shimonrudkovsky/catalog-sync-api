@@ -1,8 +1,9 @@
 from typing import Optional
 
 import asyncpg
-from config.settings import DbConfig
 from loguru import logger
+
+from config.settings import DbConfig
 
 
 class Postgres:

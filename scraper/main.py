@@ -4,11 +4,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 import uvicorn
+from fastapi import FastAPI
+from loguru import logger
+
 from config.settings import AppConfig, DbConfig
 from db.database import Postgres
 from db.utils import initialize_database
-from fastapi import FastAPI
-from loguru import logger
+from models import ScrapingStatus
 from routers.healthcheck import router as healthcheck_router
 from routers.scraper import router as scraper_router
 
@@ -47,6 +49,7 @@ def init_app(app: FastAPI, app_config: AppConfig):
 
     app.state.start_time = datetime.now()
     app.state.app_config = app_config
+    app.state.scraping_status = ScrapingStatus()
 
     logger.info("Application initialized.")
 

@@ -1,13 +1,9 @@
 import os
-from asyncio import Queue as AsyncQueue
-from asyncio import Semaphore
 from enum import Enum
 from typing import Optional
 from urllib.parse import ParseResult as ParsedUrl
 
-from db.database import Postgres
-from httpx import AsyncClient as HttpAsyncClient
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.5"))  # seconds
 
@@ -32,26 +28,6 @@ class PartDetails(BaseModel):
     part: Optional[CataloguePart]
 
 
-class ScraperContext(BaseModel):
-    semaphore: Semaphore
-    visited_urls: set
-    queue: AsyncQueue
-    http_client: HttpAsyncClient
-    db_connection: Postgres
-    scan_id: int
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
-
-
 class CatalogueLink(BaseModel):
     url: ParsedUrl
     directory: dict[CatalogueLevels, str] = Field(default=dict())
-
-
-class ScraperPayload(BaseModel):
-    link: CatalogueLink
-    level: CatalogueLevels
-    attempt: int = Field(default=1)
-    delay: float = Field(default=REQUEST_DELAY)

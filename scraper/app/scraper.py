@@ -6,10 +6,12 @@ from datetime import datetime
 import httpx
 from asyncpg import PostgresError
 from bs4 import BeautifulSoup
-from db.queries import GET_NEW_SCAN_ID, INSERT_DATA_QUERY, SCAN_ENDED
 from httpx import HTTPError
 from loguru import logger
-from models.models import (
+
+from db.database import Postgres
+from db.queries import GET_NEW_SCAN_ID, INSERT_DATA_QUERY, SCAN_ENDED
+from models import (
     REQUEST_DELAY,
     CatalogueLevels,
     CatalogueLink,
@@ -17,6 +19,7 @@ from models.models import (
     PartDetails,
     ScraperContext,
     ScraperPayload,
+    ScrapingStatus,
 )
 
 CONCURRENT_REQUESTS = 10
@@ -62,9 +65,9 @@ async def enqueue_links(links: list[CatalogueLink], next_level: CatalogueLevels,
 def parse_parts(links: list[CatalogueLink]) -> list[PartDetails]:
     parsed_parts = []
     for link in links:
-        splited_link = link.directory[CatalogueLevels.PARTS].split(" - ")
-        part_number = splited_link[0]
-        part_category = " - ".join(splited_link[1:])
+        splitted_link = link.directory[CatalogueLevels.PARTS].split(" - ")
+        part_number = splitted_link[0]
+        part_category = " - ".join(splitted_link[1:])
         part = CataloguePart(number=part_number, category=part_category, url=link.url.geturl())
         part_info = PartDetails(
             maker=link.directory[CatalogueLevels.MAKERS],
@@ -130,18 +133,19 @@ async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
 
 
 async def scraper_worker(ctx: ScraperContext):
+    ctx.scraping_status.scraping = True
     while not ctx.queue.empty():
         payload = await ctx.queue.get()
         try:
             await process_page(payload, ctx)
+            ctx.scraping_status.scraping_counter += 1
         except Exception as err:
             logger.error(err)
-            raise
         finally:
             ctx.queue.task_done()
 
 
-async def run_scraper(database):
+async def run_scraper(database: Postgres, status: ScrapingStatus):
     logger.info("running scraping...")
     queue = asyncio.Queue()
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
@@ -158,12 +162,17 @@ async def run_scraper(database):
             http_client=http_client,
             db_connection=database,
             scan_id=scan_id,
+            scraping_status=status,
         )
         link = CatalogueLink(url=urllib.parse.urlparse(url))
-        await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
-        tasks = [asyncio.create_task(scraper_worker(ctx=context)) for _ in range(CONCURRENT_REQUESTS)]
-        await queue.join()
-        for task in tasks:
-            task.cancel()
+        status.scraping = True
+        try:
+            await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
+            tasks = [asyncio.create_task(scraper_worker(ctx=context)) for _ in range(CONCURRENT_REQUESTS)]
+            await queue.join()
+            for task in tasks:
+                task.cancel()
+        finally:
+            status.scraping = False
 
     await database.execute(SCAN_ENDED, scan_id, datetime.now())
