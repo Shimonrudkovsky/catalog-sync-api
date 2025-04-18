@@ -1,15 +1,16 @@
 from typing import Optional
 
 import asyncpg
+from config.settings import DbConfig
 
 
 class Postgres:
-    def __init__(self, host: str, port: int, database: str, user: str, password: str):
-        self.host = host
-        self.port = port
-        self.database = database
-        self.user = user
-        self.password = password
+    def __init__(self, db_config: DbConfig):
+        self.host = db_config.host
+        self.port = db_config.port
+        self.database = db_config.database
+        self.user = db_config.user
+        self.password = db_config.password
         self.pool: Optional[asyncpg.Pool] = None
 
     async def connect(self):
