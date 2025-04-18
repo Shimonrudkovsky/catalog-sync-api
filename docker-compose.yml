@@ -1,16 +1,7 @@
-services:
-  db:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: parts_catalogue
-    ports:
-      - 5432:5432
-    volumes:
-      - postgres_data:/var/lib/postgresql/data 
- 
+include:
+    - path: ./scraper/docker-compose.yml 
+      env_file:
+        ./scraper/.env
  
 volumes:
   postgres_data:

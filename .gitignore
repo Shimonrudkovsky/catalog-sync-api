@@ -25,7 +25,6 @@ poetry.lock
 
 *.dockerignore
 docker-compose.override.yml
-**/Dockerfile
 
 .vscode/
 
