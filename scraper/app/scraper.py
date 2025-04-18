@@ -1,11 +1,12 @@
 import asyncio
 import urllib
 import urllib.parse
+from datetime import datetime
 
 import httpx
 from asyncpg import PostgresError
 from bs4 import BeautifulSoup
-from db.queries import INSERT_DATA_QUERY
+from db.queries import GET_NEW_SCAN_ID, INSERT_DATA_QUERY, SCAN_ENDED
 from httpx import HTTPError
 from loguru import logger
 from models.models import (
@@ -74,6 +75,25 @@ def parse_parts(links: list[CatalogueLink]) -> list[PartDetails]:
     return parsed_parts
 
 
+async def insert_parts(parts: list[PartDetails], ctx: ScraperContext):
+    for part in parts:
+        try:
+            logger.debug(f"query: {INSERT_DATA_QUERY}, args: {part}")
+            await ctx.db_connection.execute(
+                INSERT_DATA_QUERY,
+                part.maker,
+                part.category,
+                part.model,
+                part.part.number,
+                part.part.category,
+                part.part.url,
+                ctx.scan_id,
+            )
+            logger.debug(f"insert query complete args: {part}")
+        except PostgresError as err:
+            raise err  # TODO: raise another
+
+
 async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
     url = payload.link.url.geturl()
     level = payload.level
@@ -100,21 +120,7 @@ async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
         await enqueue_links(links=links, next_level=CatalogueLevels.PARTS, ctx=ctx)
     elif level == CatalogueLevels.PARTS:
         parts = parse_parts(links=links)
-        for part in parts:
-            try:
-                logger.debug(f"query: {INSERT_DATA_QUERY}, args: {part}")
-                await ctx.db_connection.execute(
-                    INSERT_DATA_QUERY,
-                    part.maker,
-                    part.category,
-                    part.model,
-                    part.part.number,
-                    part.part.category,
-                    part.part.url,
-                )
-                logger.debug(f"insert query complete args: {part}")
-            except PostgresError as err:
-                raise err  # TODO: raise another
+        await insert_parts(parts=parts, ctx=ctx)
 
     ctx.visited_urls.add(url)
 
@@ -131,12 +137,16 @@ async def scraper_worker(ctx: ScraperContext):
             ctx.queue.task_done()
 
 
+@logger.catch
 async def run_scraper(database):
     # init scraper
     queue = asyncio.Queue()
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
     base_url = "https://www.urparts.com/"
     url = f"{base_url}index.cfm/page/catalogue"
+
+    scan_id = await database.fetchval(GET_NEW_SCAN_ID, datetime.now())
+
     async with httpx.AsyncClient() as http_client:
         context = ScraperContext(
             semaphore=semaphore,
@@ -144,6 +154,7 @@ async def run_scraper(database):
             queue=queue,
             http_client=http_client,
             db_connection=database,
+            scan_id=scan_id,
         )
         link = CatalogueLink(url=urllib.parse.urlparse(url))
         await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
@@ -151,3 +162,5 @@ async def run_scraper(database):
         await queue.join()
         for task in tasks:
             task.cancel()
+
+    await database.execute(SCAN_ENDED, scan_id, datetime.now())

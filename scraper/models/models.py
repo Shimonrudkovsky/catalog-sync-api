@@ -37,6 +37,7 @@ class ScraperContext(BaseModel):
     queue: AsyncQueue
     http_client: HttpAsyncClient
     db_connection: Postgres
+    scan_id: int
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,

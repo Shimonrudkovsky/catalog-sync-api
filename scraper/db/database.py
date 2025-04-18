@@ -34,3 +34,8 @@ class Postgres:
                 return await connection.execute(query, *args)
         except asyncpg.PostgresError as err:
             raise err  # TODO: logging
+
+    async def fetchval(self, query: str, *args):
+        """Fetch a single value."""
+        async with self.pool.acquire() as connection:
+            return await connection.fetchval(query, *args)
