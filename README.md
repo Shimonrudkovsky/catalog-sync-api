@@ -11,7 +11,7 @@ Catalog Sync API is an application designed to manage a parts catalog. It consis
 
 1. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Shimonrudkovsky/catalog-sync-api
    cd catalog-sync-api
    ```
 
