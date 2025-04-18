@@ -1,0 +1,42 @@
+[project]
+name = "external-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "shimonrudkovsky@gmail.com"}
+]
+readme = "README.md"
+requires-python = "3.11.*"
+dependencies = [
+    "httpx (>=0.28.1,<0.29.0)",
+    "fastapi (>=0.115.12,<0.116.0)",
+    "tortoise-orm[asyncpg] (>=0.25.0,<0.26.0)",
+    "pydantic (>=2.11.3,<3.0.0)",
+    "mypy (>=1.15.0,<2.0.0)",
+    "uvicorn (>=0.34.1,<0.35.0)",
+    "loguru (>=0.7.3,<0.8.0)"
+]
+
+[tool.poetry]
+
+[tool.poetry.group.dev.dependencies]
+isort = "^6.0.1"
+flake8 = "^7.2.0"
+black = "^25.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+include = '\.pyi?$'
+skip-string-normalization = false
+
+[tool.isort]
+line_length = 120
+force_grid_wrap = 0
+multi_line_output = 3
+use_parentheses = true
+include_trailing_comma = true
