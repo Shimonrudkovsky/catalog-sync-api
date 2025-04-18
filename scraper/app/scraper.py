@@ -5,12 +5,10 @@ import urllib.parse
 import httpx
 from asyncpg import PostgresError
 from bs4 import BeautifulSoup
-from db.database import Postgres
 from db.queries import INSERT_DATA_QUERY
-from db.utils import initialize_database
 from httpx import HTTPError
 from loguru import logger
-from models import (
+from models.models import (
     REQUEST_DELAY,
     CatalogueLevels,
     CatalogueLink,
@@ -117,7 +115,6 @@ async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
                 logger.debug(f"insert query complete args: {part}")
             except PostgresError as err:
                 raise err  # TODO: raise another
-        # print(parts)
 
     ctx.visited_urls.add(url)
 
@@ -134,36 +131,23 @@ async def scraper_worker(ctx: ScraperContext):
             ctx.queue.task_done()
 
 
-async def main():
+async def run_scraper(database):
+    # init scraper
     queue = asyncio.Queue()
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
-    visited_urls = set()
     base_url = "https://www.urparts.com/"
-    url_str = f"{base_url}index.cfm/page/catalogue"
-    url = urllib.parse.urlparse(url_str)
-    link = CatalogueLink(url=url)
-
-    await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
-
-    database = Postgres(
-        host="localhost", port=5432, database="parts_catalogue", user="user", password="pass"
-    )  # TODO: remove hardcode
-    await database.connect()
-    await initialize_database(db=database)
-
+    url = f"{base_url}index.cfm/page/catalogue"
     async with httpx.AsyncClient() as http_client:
         context = ScraperContext(
             semaphore=semaphore,
-            visited_urls=visited_urls,
+            visited_urls=set(),
             queue=queue,
             http_client=http_client,
             db_connection=database,
         )
+        link = CatalogueLink(url=urllib.parse.urlparse(url))
+        await queue.put(ScraperPayload(link=link, level=CatalogueLevels.MAKERS, attempt=1, delay=REQUEST_DELAY))
         tasks = [asyncio.create_task(scraper_worker(ctx=context)) for _ in range(CONCURRENT_REQUESTS)]
         await queue.join()
         for task in tasks:
             task.cancel()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
