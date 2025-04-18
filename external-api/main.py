@@ -4,15 +4,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 import uvicorn
-from config import AppConfig, DbConfig
+from config.settings import AppConfig, DbConfig
 from db.postgres import close_db, init_db, register_db
 from fastapi import FastAPI
 from loguru import logger
 from routers.api import router as api_router
 from routers.healthcheck import router as healthcheck_router
-
-logger.remove()
-logger.add(sys.stderr, level="DEBUG")
 
 
 @asynccontextmanager

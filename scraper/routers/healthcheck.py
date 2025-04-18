@@ -8,15 +8,15 @@ router = APIRouter()
 
 
 class Checks(BaseModel):
-    db: bool = Field(False, example=True)
+    db: bool = Field(default=False)
 
 
 class HealthCheck(BaseModel):
-    is_sick: bool = Field(..., example=False)
+    is_sick: bool = Field(default=True)
     checks: Checks
     version: str = Field(default="0.1.0")
-    start_time: datetime = Field(..., example=datetime.now())
-    up_time: timedelta = Field(..., example=timedelta(seconds=1))
+    start_time: datetime = Field(...)
+    up_time: timedelta = Field(...)
 
 
 async def check_health(request: Request) -> HealthCheck:

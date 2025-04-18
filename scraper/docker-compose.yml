@@ -12,6 +12,8 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      REQUEST_DELAY: ${REQUEST_DELAY}
+      LOGURU_LEVEL: ${LOGURU_LEVEL}
     depends_on:
       - db
   db:

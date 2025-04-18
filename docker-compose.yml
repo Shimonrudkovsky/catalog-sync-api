@@ -2,6 +2,9 @@ include:
     - path: ./scraper/docker-compose.yml 
       env_file:
         ./scraper/.env
+    - path: ./external-api/docker-compose.yml
+      env_file:
+        ./external-api/.env
  
 volumes:
   postgres_data:

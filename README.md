@@ -1,18 +1,64 @@
-1. Web scraping, data extraction of a static website
-	•	Scrape a static website.
-	•	Check for a manufacturer, then look into the categories, then the models and the result-set where you find the part number before ‘ - ‘ and the part category.
-	•	Scrape the whole catalog from the website and load it into a database.
-	•	Containerize the scraper and database.
-2. Develop an API
-	•	Implement the API as a web service using the FastAPI framework.
-	•	Write one or multiple endpoints to expose the data.
-	•	Add query-parameters to the endpoint(s), e.g. ?manufacturer=Ammann .
-	•	Enable and configure Swagger in FastAPI.
-	•	Containerize the web service.
-3. Important to us
-	•	Scraped data is structured well in the database.
-	•	Code is structured clearly, separated by concerns and production ready.
-	•	Use docker-compose. We should be able to start the whole project with docker-compose up.
-	•	Provide a README for the project.
-	•	If you want to describe your decisions, please put them into a separate file.
-	•	Scraper should run as fast as possible through the whole page.
+# Catalog Sync API
+
+Catalog Sync API is an application designed to manage a parts catalog. It consists of the following services:
+
+- **External API**: A FastAPI-based service for interacting with the catalog (makers, categories, models, parts) and triggering scraper operations.
+- **Scraper Service**: A service responsible for scraping data and populating the catalog.
+
+---
+
+## How to Launch the Application
+
+1. **Clone the Repository**:
+   ```bash
+   git clone <repository-url>
+   cd catalog-sync-api
+   ```
+
+2. **Run the Application**:
+   Use `docker-compose` to build and start the services:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access the Services**:
+   - **External API**: [http://localhost:8081](http://localhost:8081)
+   - **Swagger UI**: [http://localhost:8081/docs](http://localhost:8081/docs)
+
+---
+
+## Services and Ports
+
+- **External API**:
+  - Runs on port `8081` (default).
+  - Provides endpoints for managing the catalog and triggering scraper operations.
+
+- **Scraper Service**:
+  - Runs on port `8080` (default).
+  - Handles long-running scraping tasks.
+
+- **Database**:
+  - Runs on port `5432` (default).
+  - Stores catalog data.
+
+---
+
+## Endpoints Overview
+
+### External API
+- **Parts**: `/parts`
+- **Makers**: `/manufacturers`
+- **Categories**: `/categories`
+- **Models**: `/models`
+- **Scans**: `/scans`
+- **Run Scraper**: `/scraper/run`
+
+### Scraper Service
+- **Run Scraper**: `/run`
+
+---
+
+## Notes
+
+- Ensure Docker and Docker Compose are installed on your system.
+- You can modify the `.env` file to customize ports and other configurations.

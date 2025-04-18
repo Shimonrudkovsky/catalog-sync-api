@@ -2,6 +2,7 @@ from typing import Optional
 
 import asyncpg
 from config.settings import DbConfig
+from loguru import logger
 
 
 class Postgres:
@@ -22,7 +23,8 @@ class Postgres:
                 max_size=10,
             )
         except asyncpg.PostgresError as err:
-            raise err  # TODO: logging
+            logger.error("connection to db failed")
+            raise err
 
     async def disconnect(self):
         if self.pool:
@@ -33,7 +35,8 @@ class Postgres:
             async with self.pool.acquire() as connection:
                 return await connection.execute(query, *args)
         except asyncpg.PostgresError as err:
-            raise err  # TODO: logging
+            logger.error(f"request to db failed. query: {query}, args: {args}")
+            raise err
 
     async def fetchval(self, query: str, *args):
         """Fetch a single value."""

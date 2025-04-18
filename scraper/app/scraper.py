@@ -19,7 +19,7 @@ from models.models import (
     ScraperPayload,
 )
 
-CONCURRENT_REQUESTS = 5
+CONCURRENT_REQUESTS = 10
 
 
 async def fetch_html(payload: ScraperPayload, ctx: ScraperContext) -> str:
@@ -40,7 +40,7 @@ def extract_links(soup: BeautifulSoup, payload: ScraperPayload) -> list[Catalogu
     catalogue_divs = [i for i in soup.find_all("div") if i.get("class") and i.get("class")[-1] == payload.level]
     list_items = catalogue_divs[0].find_all("li")
     parsed_links = []
-    for li in list_items[:2]:  # TODO: don't forget to remove
+    for li in list_items:
         a_tag = li.find("a")
         if a_tag:
             link = a_tag.get("href")
@@ -62,7 +62,9 @@ async def enqueue_links(links: list[CatalogueLink], next_level: CatalogueLevels,
 def parse_parts(links: list[CatalogueLink]) -> list[PartDetails]:
     parsed_parts = []
     for link in links:
-        part_number, part_category = link.directory[CatalogueLevels.PARTS].split(" - ")
+        splited_link = link.directory[CatalogueLevels.PARTS].split(" - ")
+        part_number = splited_link[0]
+        part_category = " - ".join(splited_link[1:])
         part = CataloguePart(number=part_number, category=part_category, url=link.url.geturl())
         part_info = PartDetails(
             maker=link.directory[CatalogueLevels.MAKERS],
@@ -91,7 +93,8 @@ async def insert_parts(parts: list[PartDetails], ctx: ScraperContext):
             )
             logger.debug(f"insert query complete args: {part}")
         except PostgresError as err:
-            raise err  # TODO: raise another
+            logger.error(f"db insertion failed: args: {part}")
+            raise err
 
 
 async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
@@ -107,7 +110,8 @@ async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:
         payload.attempt += 1
         payload.delay *= 2
         logger.debug(f"retrying fetch {url.geturl()} - attempt:{payload.attempt}, delay: {payload.delay}, error: {err}")
-        await ctx.queue.put(payload)
+        if payload.attempt <= 3:
+            await ctx.queue.put(payload)
 
     soup = BeautifulSoup(html_text, "lxml")
     links = extract_links(soup=soup, payload=payload)
@@ -137,9 +141,8 @@ async def scraper_worker(ctx: ScraperContext):
             ctx.queue.task_done()
 
 
-@logger.catch
 async def run_scraper(database):
-    # init scraper
+    logger.info("running scraping...")
     queue = asyncio.Queue()
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
     base_url = "https://www.urparts.com/"

@@ -1,3 +1,4 @@
+import os
 from asyncio import Queue as AsyncQueue
 from asyncio import Semaphore
 from enum import Enum
@@ -8,7 +9,7 @@ from db.database import Postgres
 from httpx import AsyncClient as HttpAsyncClient
 from pydantic import BaseModel, ConfigDict, Field
 
-REQUEST_DELAY = 0.5  # seconds
+REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.5"))  # seconds
 
 
 class CatalogueLevels(str, Enum):
