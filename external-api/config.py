@@ -12,3 +12,4 @@ class DbConfig(BaseModel):
 class AppConfig(BaseModel):
     port: int
     db: DbConfig
+    scraper_addr: str

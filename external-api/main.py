@@ -35,8 +35,12 @@ db_config = DbConfig(
 app_config = AppConfig(
     port=int(os.getenv("APP_PORT", 8081)),
     db=db_config,
+    scraper_addr=os.getenv("SCRAPER_ADDRESS", "http://localhost:8080/run"),
 )
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Catalog Sync API",
+    lifespan=lifespan,
+)
 
 register_db(app, db_config)
 

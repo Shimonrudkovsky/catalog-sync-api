@@ -1,7 +1,8 @@
 from typing import Optional
 
+import httpx
 from db import requests as db_requests
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from schemas import CategorySchema, MakerSchema, ModelSchema, PartSchema, ScanSchema
 
 router = APIRouter()
@@ -38,7 +39,7 @@ async def search_parts(
 
 
 @router.get("/manufacturers", response_model=list[MakerSchema])
-async def read_makers():
+async def get_makers():
     makers = await db_requests.get_makers()
     return makers
 
@@ -62,3 +63,21 @@ async def get_models(
 async def get_scans():
     scans = await db_requests.get_scans()
     return scans
+
+
+@router.get("/scraper/run")
+async def run_scraper(request: Request):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(request.app.state.app_config.scraper_addr)
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Failed to run scraper: {response.text}",
+                )
+            return {"message": "Scraper started successfully", "details": response.json()}
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to scraper service: {str(exc)}",
+        )
