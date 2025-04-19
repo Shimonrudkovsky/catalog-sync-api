@@ -81,23 +81,20 @@ def parse_parts(links: list[CatalogueLink]) -> list[PartDetails]:
 
 
 async def insert_parts(parts: list[PartDetails], ctx: ScraperContext):
-    for part in parts:
-        try:
-            logger.debug(f"query: {INSERT_DATA_QUERY}, args: {part}")
-            await ctx.db_connection.execute(
-                INSERT_DATA_QUERY,
-                part.maker,
-                part.category,
-                part.model,
-                part.part.number,
-                part.part.category,
-                part.part.url,
-                ctx.scan_id,
-            )
-            logger.debug(f"insert query complete args: {part}")
-        except PostgresError as err:
-            logger.error(f"db insertion failed: args: {part}")
-            raise err
+    try:
+        parts_set = set(
+            [(p.maker, p.category, p.model, p.part.number, p.part.category, p.part.url, ctx.scan_id) for p in parts]
+        )
+        await ctx.db_connection.executemany(
+            INSERT_DATA_QUERY,
+            parts_set,
+        )
+        if len(parts) > len(parts_set):
+            logger.warning(f"duplicates in bulk insert: {len(parts) - len(parts_set)}")
+        logger.debug(f"insert query complete items: {len(parts_set)}")
+    except PostgresError as err:
+        logger.error(f"db insertion failed: items: {len(parts_set)}")
+        raise err
 
 
 async def process_page(payload: ScraperPayload, ctx: ScraperContext) -> None:

@@ -20,12 +20,18 @@ class CataloguePart(BaseModel):
     category: str
     url: str
 
+    class Config:
+        frozen = True
+
 
 class PartDetails(BaseModel):
     maker: Optional[str]
     category: Optional[str]
     model: Optional[str]
     part: Optional[CataloguePart]
+
+    class Config:
+        frozen = True
 
 
 class CatalogueLink(BaseModel):

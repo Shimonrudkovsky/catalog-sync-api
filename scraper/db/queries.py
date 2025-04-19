@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS parts (
     part_category TEXT NOT NULL,
     url TEXT NOT NULL,
     scan_id INT NOT NULL,
-    UNIQUE (maker_id, category_id, model_id, part_number, part_category, scan_id),
+    UNIQUE (maker_id, category_id, model_id, part_number, part_category, url, scan_id),
     FOREIGN KEY (maker_id) REFERENCES makers (id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
     FOREIGN KEY (model_id) REFERENCES models (id) ON DELETE CASCADE,

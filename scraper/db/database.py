@@ -39,6 +39,14 @@ class Postgres:
             logger.error(f"request to db failed. query: {query}, args: {args}")
             raise err
 
+    async def executemany(self, query: str, *args):
+        try:
+            async with self.pool.acquire() as connection:
+                return await connection.executemany(query, *args)
+        except asyncpg.PostgresError as err:
+            logger.error(f"request to db failed {err}")
+            raise err
+
     async def fetchval(self, query: str, *args):
         """Fetch a single value."""
         async with self.pool.acquire() as connection:
